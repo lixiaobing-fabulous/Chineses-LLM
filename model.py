@@ -17,6 +17,15 @@ class GPTConfig:
     bias: bool = False
 
 
+class GELU(nn.Module):
+    """
+    Implementation of the GELU activation function currently in Google BERT repo (identical to openai GPT)
+    Reference: Gaussian Error Linear Units (GELU)  paper: https://arxiv.org/abs/1606.08415
+    """
+    def forward(self, x):
+        return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
+
+
 class LayerNorm(nn.Module):
 
     def __init__(self, ndim):
@@ -68,7 +77,7 @@ class MLP(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.fc = nn.Linear(config.n_embed, 4 * config.n_embed, bias=config.bias)
-        self.gelu = nn.GELU()
+        self.gelu = GELU()
         self.project = nn.Linear(4 * config.n_embed, config.n_embed, bias=config.bias)
         self.dropout = nn.Dropout(config.dropout)
 
@@ -120,12 +129,12 @@ class GPT(nn.Module):
         self.apply(self._init_weights)
         for pn, p in self.named_parameters():
             if pn.endswith('project.weight'):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2*config.n_layer))
+                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer))
 
         print("number of parameters: %.2fM" % (self.get_num_params() / 1e6))
 
     def get_num_params(self, non_embedding=True):
-        n_params =  sum(p.numel() for p in self.parameters())
+        n_params = sum(p.numel() for p in self.parameters())
         if non_embedding:
             n_params -= self.transformer.word_embedding.weight.numel()
             n_params -= self.transformer.positional_embedding.weight.numel()
@@ -167,4 +176,3 @@ class GPT(nn.Module):
             idx_next = torch.multinomial(probs, num_samples=1)
             idx = torch.cat((idx, idx_next), dim=1)
         return idx
-
