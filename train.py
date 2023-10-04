@@ -2,6 +2,7 @@ from model import GPTConfig, GPT
 import torch
 import os
 import numpy as np
+import pickle
 
 learning_rate = 1e-3
 max_iters = 5000
@@ -16,24 +17,19 @@ gpt_conf = GPTConfig()
 model = GPT(gpt_conf)
 model.to(device)
 
-with open('data/proto_test/input.txt', 'r', encoding='utf-8') as f:
-    text = f.read()
-chars = sorted(list(set(text)))
-vocab_size = len(chars)
-stoi = {ch: i for i, ch in enumerate(chars)}
-itos = {i: ch for i, ch in enumerate(chars)}
 
-encode = lambda s: [stoi[c] for c in s]
-decode = lambda l: ''.join([itos[i] for i in l])
-data = torch.tensor(encode(text), dtype=torch.long)
-n = int(0.9 * len(data))
-train_data = data[:n]
-val_data = data[n:]
 dataset = 'proto_test'
 data_dir = os.path.join('data', dataset)
 train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
 val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
 
+meta_path = os.path.join(data_dir, 'meta.pkl')
+with open(meta_path, 'rb') as f:
+    meta = pickle.load(f)
+vocab_size = meta['vocab_size']
+stoi, itos = meta['stoi'], meta['itos']
+encode = lambda s: [stoi[c] for c in s]
+decode = lambda l: ''.join([itos[i] for i in l])
 
 @torch.no_grad()
 def estimate_loss():
