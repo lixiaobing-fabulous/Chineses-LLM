@@ -148,6 +148,10 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
+    def configure_optimizers(self, learning_rate):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=learning_rate)
+        return optimizer
+
     def forward(self, idx, targets=None):
         device = idx.device
         b, t = idx.size()
