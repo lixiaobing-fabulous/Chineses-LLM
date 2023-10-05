@@ -4,18 +4,28 @@ import os
 import numpy as np
 import pickle
 
+outdir = 'out'
+
+block_size = 32
+n_layer = 4
+n_head = 4
+n_embed = 64
+vocab_size = 65
+dropout = 0.0
+bias = False
+
 learning_rate = 1e-3
 max_iters = 5000
 eval_interval = 100
 eval_iters = 200
-block_size = 32
 batch_size = 16
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 if __name__ == '__main__':
-
-    gpt_conf = GPTConfig()
+    model_args = dict(n_layer=n_layer, n_head=n_head, n_embed=n_embed, block_size=block_size, bias=bias,
+                      vocab_size=vocab_size, dropout=dropout)
+    gpt_conf = GPTConfig(**model_args)
     model = GPT(gpt_conf)
     model.to(device)
 
@@ -75,12 +85,17 @@ if __name__ == '__main__':
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
+            checkpoint = {
+                'model_args': model_args,
+                'model': model.state_dict(),
+            }
+            print(f"saving checkpoint to {outdir}")
+            os.makedirs(outdir, exist_ok=True)
+            torch.save(checkpoint, os.path.join(outdir, 'ckpt.pt'))
+
 
 
     Trainer(model).run()
-    context = torch.zeros((1, 1), dtype=torch.long, device=device)
-    print(decode(model.generate(context, max_new_tokens=2000)[0].tolist()))
-
 # 1.7808 non embedding sharing
 # 1.8875 embedding sharing
 # 1.8178 non embedding sharing with init by hand
