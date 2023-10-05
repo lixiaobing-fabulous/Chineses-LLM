@@ -4,12 +4,12 @@ import os
 import numpy as np
 import pickle
 
-outdir = 'out'
 
 block_size = 32
 n_layer = 4
 n_head = 4
 n_embed = 64
+
 vocab_size = 65
 dropout = 0.0
 bias = False
@@ -23,24 +23,24 @@ batch_size = 16
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 if __name__ == '__main__':
+
+    dataset = 'proto_test_tiktoken'
+    data_dir = os.path.join('data', dataset)
+    train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
+    val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
+    meta_path = os.path.join(data_dir, 'meta.pkl')
+    if os.path.exists(meta_path):
+        with open(meta_path, 'rb') as f:
+            meta = pickle.load(f)
+        vocab_size = meta['vocab_size']
+    else:
+        vocab_size = 50304
+
     model_args = dict(n_layer=n_layer, n_head=n_head, n_embed=n_embed, block_size=block_size, bias=bias,
                       vocab_size=vocab_size, dropout=dropout)
     gpt_conf = GPTConfig(**model_args)
     model = GPT(gpt_conf)
     model.to(device)
-
-    dataset = 'proto_test'
-    data_dir = os.path.join('data', dataset)
-    train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
-    val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
-
-    meta_path = os.path.join(data_dir, 'meta.pkl')
-    with open(meta_path, 'rb') as f:
-        meta = pickle.load(f)
-    vocab_size = meta['vocab_size']
-    stoi, itos = meta['stoi'], meta['itos']
-    encode = lambda s: [stoi[c] for c in s]
-    decode = lambda l: ''.join([itos[i] for i in l])
 
 
     @torch.no_grad()
@@ -89,10 +89,9 @@ if __name__ == '__main__':
                 'model_args': model_args,
                 'model': model.state_dict(),
             }
-            print(f"saving checkpoint to {outdir}")
-            os.makedirs(outdir, exist_ok=True)
-            torch.save(checkpoint, os.path.join(outdir, 'ckpt.pt'))
-
+            print(f"saving checkpoint to {data_dir}")
+            os.makedirs(data_dir, exist_ok=True)
+            torch.save(checkpoint, os.path.join(data_dir, 'ckpt.pt'))
 
 
     Trainer(model).run()
