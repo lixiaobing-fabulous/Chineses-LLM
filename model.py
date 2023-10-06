@@ -127,7 +127,7 @@ class GPT(nn.Module):
         ))
         self.lm_head = nn.Linear(config.n_embed, config.vocab_size, bias=False)
         # https://paperswithcode.com/method/weight-tying
-        self.transformer.wte.weight = self.lm_head.weight
+        # self.transformer.wte.weight = self.lm_head.weight
         self.apply(self._init_weights)
         for pn, p in self.named_parameters():
             if pn.endswith('project.weight'):
@@ -177,6 +177,42 @@ class GPT(nn.Module):
     def from_pretrained(cls, model_type):
         assert model_type in ('gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl')
         from transformers import GPT2LMHeadModel
+        print(f"loading weights from pretrained gpt {model_type}")
+
+        config_args = {
+            'gpt2': dict(n_layer=12, n_head=12, n_embed=768),  # 124M params
+            'gpt2-medium': dict(n_layer=24, n_head=16, n_embed=1024),  # 350M params
+            'gpt2-large': dict(n_layer=36, n_head=20, n_embed=1280),  # 774M params
+            'gpt-xl': dict(n_layer=48, n_head=25, n_embed=1600),  # 1558M params
+        }[model_type]
+        print('forcing vocab_size=50257, block_size=1024, bias=True')
+        config_args['vocab_size'] = 50257
+        config_args['block_size'] = 1024
+        config_args['bias'] = True
+        config = GPTConfig(**config_args)
+        model = GPT(config)
+        sd = model.state_dict()
+        sd_keys = sd.keys()
+        sd_keys = [k for k in sd_keys if not k.endswith('.attn.bias')]
+
+        model_huggingface = GPT2LMHeadModel.from_pretrained(model_type)
+        sd_huggingface = model_huggingface.state_dict()
+        sd_keys_huggingface = sd_huggingface.keys()
+        sd_keys_huggingface = [k for k in sd_keys_huggingface if not k.endswith('.attn.masked_bias')]
+        sd_keys_huggingface = [k for k in sd_keys_huggingface if not k.endswith('.attn.bias')]
+        transposed = ['attn.c_attn.weight', 'attn.c_proj.weight', 'mlp.c_fc.weight', 'mlp.c_proj.weight']
+        assert len(sd_keys_huggingface) == len(
+            sd_keys), f"mismatched keys: {len(sd_keys_huggingface)} != {len(sd_keys)}"
+        for k in sd_keys_huggingface:
+            if any(k.endswith(w) for w in transposed):
+                assert sd_huggingface[k].shape[::-1] == sd[k].shape
+                with torch.no_grad():
+                    sd[k].copy_(sd_huggingface[k].t())
+            else:
+                assert sd_huggingface[k].shape == sd[k].shape
+                with torch.no_grad():
+                    sd[k].copy_(sd_huggingface[k])
+        return model
 
     def generate(self, idx, max_new_tokens, temperature=1.0):
         for _ in range(max_new_tokens):

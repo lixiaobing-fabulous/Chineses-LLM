@@ -8,11 +8,12 @@ from model import GPTConfig, GPT
 
 device = 'cuda'
 dataset = 'proto_test'
+init_from_pretrained = True
 
 if __name__ == '__main__':
     data_dir = os.path.join('data', dataset)
     meta_path = os.path.join(data_dir, 'meta.pkl')
-    if os.path.exists(meta_path):
+    if not init_from_pretrained and os.path.exists(meta_path):
         with open(meta_path, 'rb') as f:
             meta = pickle.load(f)
         stoi, itos = meta['stoi'], meta['itos']
@@ -23,13 +24,17 @@ if __name__ == '__main__':
         encode = lambda s: enc.encode_ordinary(s)
         decode = lambda l: enc.decode(l)
 
-    ckpt_path = os.path.join(data_dir, 'ckpt.pt')
-    checkpoint = torch.load(ckpt_path, map_location=device)
-    gptConf = GPTConfig(**checkpoint['model_args'])
-    model = GPT(gptConf)
-    state_dict = checkpoint['model']
-    model.load_state_dict(state_dict)
+    if init_from_pretrained:
+        model = GPT.from_pretrained('gpt2')
+    else:
+        ckpt_path = os.path.join(data_dir, 'ckpt.pt')
+        checkpoint = torch.load(ckpt_path, map_location=device)
+        gptConf = GPTConfig(**checkpoint['model_args'])
+        model = GPT(gptConf)
+        state_dict = checkpoint['model']
+        model.load_state_dict(state_dict)
     model.eval()
     model.to(device)
-    context = torch.zeros((1, 1), dtype=torch.long, device=device)
+    context = torch.zeros((1,1), dtype=torch.long, device=device)
+    # context = torch.tensor(encode("Hello, how are you?"), dtype=torch.long).unsqueeze(0).to(device)
     print(decode(model.generate(context, max_new_tokens=2000)[0].tolist()))
