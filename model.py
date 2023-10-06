@@ -29,12 +29,13 @@ class GELU(nn.Module):
 
 class LayerNorm(nn.Module):
 
-    def __init__(self, ndim):
+    def __init__(self, ndim, bias):
         super().__init__()
-        self.layer_norm = nn.LayerNorm(ndim)
+        self.weight = nn.Parameter(torch.ones(ndim))
+        self.bias = nn.Parameter(torch.zeros(ndim)) if bias else None
 
     def forward(self, x):
-        return self.layer_norm(x)
+        return F.layer_norm(x, self.weight.shape, self.weight, self.bias, 1e-5)
 
 
 class SelfAttention(nn.Module):
@@ -94,9 +95,9 @@ class Block(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.ln_1 = LayerNorm(config.n_embed)
+        self.ln_1 = LayerNorm(config.n_embed, bias=config.bias)
         self.attn = SelfAttention(config)
-        self.ln_2 = LayerNorm(config.n_embed)
+        self.ln_2 = LayerNorm(config.n_embed, bias=config.bias)
         self.mlp = MLP(config)
 
     def forward(self, x):
@@ -122,7 +123,7 @@ class GPT(nn.Module):
             wpe=nn.Embedding(config.block_size, config.n_embed),
             drop=nn.Dropout(config.dropout),
             h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
-            ln_f=LayerNorm(config.n_embed)
+            ln_f=LayerNorm(config.n_embed, config.bias)
         ))
         self.lm_head = nn.Linear(config.n_embed, config.vocab_size, bias=False)
         # https://paperswithcode.com/method/weight-tying
