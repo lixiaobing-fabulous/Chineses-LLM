@@ -24,7 +24,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 if __name__ == '__main__':
 
-    dataset = 'proto_test_tiktoken'
+    dataset = 'proto_test'
     data_dir = os.path.join('data', dataset)
     train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
     val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')

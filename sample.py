@@ -7,7 +7,7 @@ import torch
 from model import GPTConfig, GPT
 
 device = 'cuda'
-dataset = 'proto_test_tiktoken'
+dataset = 'proto_test'
 
 if __name__ == '__main__':
     data_dir = os.path.join('data', dataset)

@@ -22,6 +22,7 @@ class GELU(nn.Module):
     Implementation of the GELU activation function currently in Google BERT repo (identical to openai GPT)
     Reference: Gaussian Error Linear Units (GELU)  paper: https://arxiv.org/abs/1606.08415
     """
+
     def forward(self, x):
         return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
@@ -41,8 +42,8 @@ class SelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         assert config.n_embed % config.n_head == 0
-        self.attn = nn.Linear(config.n_embed, 3 * config.n_embed, bias=config.bias)
-        self.proj = nn.Linear(config.n_embed, config.n_embed, bias=config.bias)
+        self.c_attn = nn.Linear(config.n_embed, 3 * config.n_embed, bias=config.bias)
+        self.c_proj = nn.Linear(config.n_embed, config.n_embed, bias=config.bias)
         self.attn_dropout = nn.Dropout(config.dropout)
         self.resid_dropout = nn.Dropout(config.dropout)
         self.n_head = config.n_head
@@ -53,7 +54,7 @@ class SelfAttention(nn.Module):
 
     def forward(self, x):
         B, T, C = x.size()  # batch_size, sequence_length, embedding dimensionality
-        attn_layer = self.attn(x)  # calculate query, key, values for all heads
+        attn_layer = self.c_attn(x)  # calculate query, key, values for all heads
         q, k, v = attn_layer.split(self.n_embed, dim=2)  # split query, key, values
         q = q.view(B, T, self.n_head, self.n_embed // self.n_head)  # (B, T, n_head, head_size)
         k = k.view(B, T, self.n_head, self.n_embed // self.n_head)  # (B, T, n_head, head_size)
@@ -69,22 +70,22 @@ class SelfAttention(nn.Module):
         attn = self.attn_dropout(attn)
         y = attn @ v  # （B, nh, T, T) x (B, nh, T, hs)->(B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C)
-        y = self.resid_dropout(y)
+        y = self.resid_dropout(self.c_proj(y))
         return y
 
 
 class MLP(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.fc = nn.Linear(config.n_embed, 4 * config.n_embed, bias=config.bias)
+        self.c_fc = nn.Linear(config.n_embed, 4 * config.n_embed, bias=config.bias)
         self.gelu = GELU()
-        self.project = nn.Linear(4 * config.n_embed, config.n_embed, bias=config.bias)
+        self.c_proj = nn.Linear(4 * config.n_embed, config.n_embed, bias=config.bias)
         self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
-        x = self.fc(x)
+        x = self.c_fc(x)
         x = self.gelu(x)
-        x = self.project(x)
+        x = self.c_proj(x)
         x = self.dropout(x)
         return x
 
@@ -117,15 +118,15 @@ class GPT(nn.Module):
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
-            word_embedding=nn.Embedding(config.vocab_size, config.n_embed),
-            positional_embedding=nn.Embedding(config.block_size, config.n_embed),
-            dropout=nn.Dropout(config.dropout),
-            blocks=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
-            layer_norm=LayerNorm(config.n_embed)
+            wte=nn.Embedding(config.vocab_size, config.n_embed),
+            wpe=nn.Embedding(config.block_size, config.n_embed),
+            drop=nn.Dropout(config.dropout),
+            h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+            ln_f=LayerNorm(config.n_embed)
         ))
-        self.linear_transform = nn.Linear(config.n_embed, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.n_embed, config.vocab_size, bias=False)
         # https://paperswithcode.com/method/weight-tying
-        self.transformer.word_embedding.weight = self.linear_transform.weight
+        self.transformer.wte.weight = self.lm_head.weight
         self.apply(self._init_weights)
         for pn, p in self.named_parameters():
             if pn.endswith('project.weight'):
@@ -136,8 +137,8 @@ class GPT(nn.Module):
     def get_num_params(self, non_embedding=True):
         n_params = sum(p.numel() for p in self.parameters())
         if non_embedding:
-            n_params -= self.transformer.word_embedding.weight.numel()
-            n_params -= self.transformer.positional_embedding.weight.numel()
+            n_params -= self.transformer.wte.weight.numel()
+            n_params -= self.transformer.wpe.weight.numel()
         return n_params
 
     def _init_weights(self, module):
@@ -157,19 +158,24 @@ class GPT(nn.Module):
         b, t = idx.size()
         assert t <= self.config.block_size
         pos = torch.arange(0, t, dtype=torch.long, device=device)
-        word_emb = self.transformer.word_embedding(idx)
-        pos_emb = self.transformer.positional_embedding(pos)
-        x = self.transformer.dropout(word_emb + pos_emb)
-        for block in self.transformer.blocks:
+        word_emb = self.transformer.wte(idx)
+        pos_emb = self.transformer.wpe(pos)
+        x = self.transformer.drop(word_emb + pos_emb)
+        for block in self.transformer.h:
             x = block(x)
-        x = self.transformer.layer_norm(x)
+        x = self.transformer.ln_f(x)
         if targets is not None:
-            logits = self.linear_transform(x)
+            logits = self.lm_head(x)
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
         else:
-            logits = self.linear_transform(x[:, [-1], :])
+            logits = self.lm_head(x[:, [-1], :])
             loss = None
         return logits, loss
+
+    @classmethod
+    def from_pretrained(cls, model_type):
+        assert model_type in ('gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl')
+        from transformers import GPT2LMHeadModel
 
     def generate(self, idx, max_new_tokens, temperature=1.0):
         for _ in range(max_new_tokens):
