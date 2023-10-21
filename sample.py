@@ -8,7 +8,7 @@ from model import GPTConfig, GPT
 
 device = 'cuda'
 dataset = 'proto_test'
-init_from_pretrained = True
+init_from_pretrained = False
 
 if __name__ == '__main__':
     data_dir = os.path.join('data', dataset)
@@ -36,5 +36,5 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
     context = torch.zeros((1,1), dtype=torch.long, device=device)
-    # context = torch.tensor(encode("Hello, how are you?"), dtype=torch.long).unsqueeze(0).to(device)
-    print(decode(model.generate(context, max_new_tokens=2000)[0].tolist()))
+    # context = torch.tensor(encode("Alan Turing theorized that computers would one day become"), dtype=torch.long).unsqueeze(0).to(device)
+    print(decode(model.generate(context, max_new_tokens=400)[0].tolist()))
