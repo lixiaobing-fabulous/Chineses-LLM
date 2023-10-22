@@ -4,11 +4,10 @@ import os
 import numpy as np
 import pickle
 
-
-block_size = 32
-n_layer = 4
-n_head = 4
-n_embed = 64
+block_size = 64
+n_layer = 8
+n_head = 8
+n_embed = 128
 
 vocab_size = 65
 dropout = 0.0
@@ -18,13 +17,13 @@ learning_rate = 1e-3
 max_iters = 5000
 eval_interval = 100
 eval_iters = 200
-batch_size = 16
+batch_size = 256
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
+resume_data_ckpt = './data/pretrain_wikipedia/ckpt.pt'
 if __name__ == '__main__':
 
-    dataset = 'proto_test'
+    dataset = 'instruction_tunning'
     data_dir = os.path.join('data', dataset)
     train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
     val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
@@ -33,11 +32,19 @@ if __name__ == '__main__':
         with open(meta_path, 'rb') as f:
             meta = pickle.load(f)
         vocab_size = meta['vocab_size']
-
-    model_args = dict(n_layer=n_layer, n_head=n_head, n_embed=n_embed, block_size=block_size, bias=bias,
-                      vocab_size=vocab_size, dropout=dropout)
-    gpt_conf = GPTConfig(**model_args)
-    model = GPT(gpt_conf)
+    if len(resume_data_ckpt) > 0:
+        checkpoint = torch.load(resume_data_ckpt, map_location=device)
+        model_args = checkpoint['model_args']
+        gptConf = GPTConfig(**model_args)
+        print(gptConf)
+        model = GPT(gptConf)
+        state_dict = checkpoint['model']
+        model.load_state_dict(state_dict)
+    else:
+        model_args = dict(n_layer=n_layer, n_head=n_head, n_embed=n_embed, block_size=block_size, bias=bias,
+                          vocab_size=vocab_size, dropout=dropout)
+        gpt_conf = GPTConfig(**model_args)
+        model = GPT(gpt_conf)
     model.to(device)
 
 

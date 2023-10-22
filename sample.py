@@ -4,7 +4,7 @@ from tokenizer import Tokenizer
 from model import GPTConfig, GPT
 
 device = 'cuda'
-dataset = 'proto_test'
+dataset = 'pretrain_wikipedia'
 init_from_pretrained = False
 
 if __name__ == '__main__':
@@ -18,11 +18,13 @@ if __name__ == '__main__':
         ckpt_path = os.path.join(data_dir, 'ckpt.pt')
         checkpoint = torch.load(ckpt_path, map_location=device)
         gptConf = GPTConfig(**checkpoint['model_args'])
+        print(gptConf)
         model = GPT(gptConf)
         state_dict = checkpoint['model']
         model.load_state_dict(state_dict)
+        print(model)
     model.eval()
     model.to(device)
-    context = torch.zeros((1,1), dtype=torch.long, device=device)
-    # context = torch.tensor(encode("Alan Turing theorized that computers would one day become"), dtype=torch.long).unsqueeze(0).to(device)
+    # context = torch.zeros((1,1), dtype=torch.long, device=device)
+    context = torch.tensor(tokenizer.encode("黄大仙文化公园"), dtype=torch.long).unsqueeze(0).to(device)
     print(tokenizer.decode(model.generate(context, max_new_tokens=400)[0].tolist()))

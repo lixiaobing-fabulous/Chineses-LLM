@@ -2,6 +2,8 @@ import pickle
 
 import tiktoken
 
+from chatglm_tokenizer.tokenization_chatglm import ChatGLMTokenizer
+
 
 class Tokenizer:
     @staticmethod
@@ -11,8 +13,13 @@ class Tokenizer:
         type = meta['tokenizer']
         if type == 'simple':
             return SimpleTokenizer(meta)
+        elif type == 'gpt2':
+            return GPT2Tokenizer()
+        elif type == 'chatglm':
+            return ChatGlmTokenizer()
         else:
             return GPT2Tokenizer()
+
 
 
 class SimpleTokenizer:
@@ -36,3 +43,14 @@ class GPT2Tokenizer:
 
     def decode(self, ids):
         return self.enc.decode(ids)
+
+
+class ChatGlmTokenizer:
+    def __init__(self):
+        self.tokenizer = ChatGLMTokenizer(vocab_file='./chatglm_tokenizer/tokenizer.model')
+
+    def encode(self, s):
+        return self.tokenizer.encode(s, add_special_tokens=False)
+
+    def decode(self, ids):
+        return self.tokenizer.decode(ids)
