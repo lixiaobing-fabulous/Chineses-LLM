@@ -1,4 +1,5 @@
 import os.path
+import pickle
 
 from datasets import load_dataset
 import tiktoken
@@ -39,3 +40,12 @@ if __name__ == '__main__':
             arr[idx:idx + len(arr_batch)] = arr_batch
             idx += len(arr_batch)
         arr.flush()
+
+    meta = {
+        'vocab_size': 50257,
+        'tokenizer': 'gpt2',
+    }
+
+    with open(os.path.join(os.path.dirname(__file__), 'meta.pkl'), 'wb') as f:
+        pickle.dump(meta, f)
+

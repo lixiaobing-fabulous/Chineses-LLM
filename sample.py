@@ -1,9 +1,6 @@
 import os
-import pickle
-
-import tiktoken
 import torch
-
+from tokenizer import Tokenizer
 from model import GPTConfig, GPT
 
 device = 'cuda'
@@ -13,16 +10,7 @@ init_from_pretrained = False
 if __name__ == '__main__':
     data_dir = os.path.join('data', dataset)
     meta_path = os.path.join(data_dir, 'meta.pkl')
-    if not init_from_pretrained and os.path.exists(meta_path):
-        with open(meta_path, 'rb') as f:
-            meta = pickle.load(f)
-        stoi, itos = meta['stoi'], meta['itos']
-        encode = lambda s: [stoi[c] for c in s]
-        decode = lambda l: ''.join([itos[i] for i in l])
-    else:
-        enc = tiktoken.get_encoding('gpt2')
-        encode = lambda s: enc.encode_ordinary(s)
-        decode = lambda l: enc.decode(l)
+    tokenizer = Tokenizer.new_tokenizer(meta_path)
 
     if init_from_pretrained:
         model = GPT.from_pretrained('gpt2')
@@ -37,4 +25,4 @@ if __name__ == '__main__':
     model.to(device)
     context = torch.zeros((1,1), dtype=torch.long, device=device)
     # context = torch.tensor(encode("Alan Turing theorized that computers would one day become"), dtype=torch.long).unsqueeze(0).to(device)
-    print(decode(model.generate(context, max_new_tokens=400)[0].tolist()))
+    print(tokenizer.decode(model.generate(context, max_new_tokens=400)[0].tolist()))

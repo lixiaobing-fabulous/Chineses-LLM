@@ -33,8 +33,6 @@ if __name__ == '__main__':
         with open(meta_path, 'rb') as f:
             meta = pickle.load(f)
         vocab_size = meta['vocab_size']
-    else:
-        vocab_size = 50304
 
     model_args = dict(n_layer=n_layer, n_head=n_head, n_embed=n_embed, block_size=block_size, bias=bias,
                       vocab_size=vocab_size, dropout=dropout)

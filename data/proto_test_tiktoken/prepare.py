@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import numpy as np
 import tiktoken
@@ -20,6 +21,12 @@ if __name__ == '__main__':
     val_ids = np.array(val_ids, dtype=np.uint16)
     train_ids.tofile(os.path.join(os.path.dirname(__file__), 'train.bin'))
     val_ids.tofile(os.path.join(os.path.dirname(__file__), 'val.bin'))
+    meta = {
+        'vocab_size': 50257,
+        'tokenizer': 'gpt2',
+    }
 
+    with open(os.path.join(os.path.dirname(__file__), 'meta.pkl'), 'wb') as f:
+        pickle.dump(meta, f)
 #train has 301,966 tokens
 #val has 36,059 tokens

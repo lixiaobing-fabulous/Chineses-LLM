@@ -43,7 +43,8 @@ if __name__ == '__main__':
     meta = {
         'vocab_size': vocab_size,
         'itos': itos,
-        'stoi': stoi
+        'stoi': stoi,
+        'tokenizer': 'simple',
     }
 
     with open(os.path.join(os.path.dirname(__file__), 'meta.pkl'), 'wb') as f:
