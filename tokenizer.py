@@ -53,4 +53,9 @@ class ChatGlmTokenizer:
         return self.tokenizer.encode(s, add_special_tokens=False)
 
     def decode(self, ids):
-        return self.tokenizer.decode(ids)
+        input = []
+        for id in ids:
+            if id == self.tokenizer.special_tokens['<eos>']:
+                break
+            input.append(id)
+        return self.tokenizer.decode(input)

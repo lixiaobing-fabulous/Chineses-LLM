@@ -14,16 +14,16 @@ dropout = 0.0
 bias = False
 
 learning_rate = 1e-3
-max_iters = 5000
+max_iters = 50000
 eval_interval = 100
 eval_iters = 200
 batch_size = 256
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-resume_data_ckpt = './data/pretrain_wikipedia/ckpt.pt'
+resume_data_ckpt = './data/instruction_tuning/ckpt.pt'
 if __name__ == '__main__':
 
-    dataset = 'instruction_tunning'
+    dataset = 'sft_medical'
     data_dir = os.path.join('data', dataset)
     train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
     val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
