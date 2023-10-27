@@ -14,6 +14,8 @@ if __name__ == '__main__':
 
     if init_from_pretrained:
         model = GPT.from_pretrained('gpt2')
+        tokenizer = Tokenizer.new_tokenizer('gpt2')
+
     else:
         ckpt_path = os.path.join(data_dir, 'ckpt.pt')
         checkpoint = torch.load(ckpt_path, map_location=device)
@@ -26,5 +28,5 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
     # context = torch.zeros((1,1), dtype=torch.long, device=device)
-    context = torch.tensor(tokenizer.encode("毒蕈中毒预防是什么？"), dtype=torch.long).unsqueeze(0).to(device)
-    print(tokenizer.decode(model.generate(context, max_new_tokens=400)[0].tolist()))
+    context = torch.tensor(tokenizer.encode("湖南医学院为全国临床药理培训中心"), dtype=torch.long).unsqueeze(0).to(device)
+    print(tokenizer.decode(model.generate(context, max_new_tokens=100)[0].tolist()))

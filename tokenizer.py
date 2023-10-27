@@ -1,3 +1,4 @@
+import os.path
 import pickle
 
 import tiktoken
@@ -8,18 +9,20 @@ from chatglm_tokenizer.tokenization_chatglm import ChatGLMTokenizer
 class Tokenizer:
     @staticmethod
     def new_tokenizer(meta_file):
-        with open(meta_file, 'rb') as f:
-            meta = pickle.load(f)
-        type = meta['tokenizer']
-        if type == 'simple':
-            return SimpleTokenizer(meta)
-        elif type == 'gpt2':
-            return GPT2Tokenizer()
-        elif type == 'chatglm':
-            return ChatGlmTokenizer()
+        if os.path.exists(meta_file):
+            with open(meta_file, 'rb') as f:
+                meta = pickle.load(f)
+            type = meta['tokenizer']
+            if type == 'simple':
+                return SimpleTokenizer(meta)
+            elif type == 'gpt2':
+                return GPT2Tokenizer()
+            elif type == 'chatglm':
+                return ChatGlmTokenizer()
+            else:
+                return GPT2Tokenizer()
         else:
             return GPT2Tokenizer()
-
 
 
 class SimpleTokenizer:
