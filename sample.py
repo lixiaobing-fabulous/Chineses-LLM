@@ -5,7 +5,7 @@ from model import GPTConfig, GPT
 
 device = 'cuda'
 dataset = 'sft_medical'
-init_from_pretrained = False
+init_from_pretrained = True
 
 if __name__ == '__main__':
     data_dir = os.path.join('data', dataset)
@@ -28,5 +28,5 @@ if __name__ == '__main__':
     model.eval()
     model.to(device)
     # context = torch.zeros((1,1), dtype=torch.long, device=device)
-    context = torch.tensor(tokenizer.encode("湖南医学院为全国临床药理培训中心"), dtype=torch.long).unsqueeze(0).to(device)
+    context = torch.tensor(tokenizer.encode("Translator communicated acceleration's "), dtype=torch.long).unsqueeze(0).to(device)
     print(tokenizer.decode(model.generate(context, max_new_tokens=100)[0].tolist()))
