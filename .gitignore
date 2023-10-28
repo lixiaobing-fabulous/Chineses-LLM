@@ -3,3 +3,6 @@
 *.bin
 *.pt
 numpy/models/
+data/instruction_tuning/Belle_open_source_1M.json
+data/sft_medical/train_encyclopedia.json
+data/pretrain_wikipedia/wikipedia-cn-20230720-filtered.json
